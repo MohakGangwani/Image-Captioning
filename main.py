@@ -9,6 +9,7 @@ from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.inception_v3 import preprocess_input
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.layers import Input, Embedding, LSTM, Dense, add
 
 def initialize():
     
@@ -30,7 +31,7 @@ def initialize():
     captions = captions.sample(frac=1)
     
     # Create a tokenizer to convert text to sequences
-    global tkoenizer
+    global tokenizer
     tokenizer = Tokenizer(num_words=5000)  # Only consider the top 5000 words
     tokenizer.fit_on_texts(captions)  # captions is a list of all image captions
 
@@ -57,6 +58,26 @@ def preprocess_img(img_path):
 # Function to extract features from a preprocessed image
 def extract_img_features(preprocessed_img):
     return cnn_model.predict(preprocess_img)
+
+
+def build_model():
+    # Define the input for the image features
+    image_input = Input(shape=(2048,))  # Assuming the CNN outputs a 2048-dimensional feature vector
+    image_dense = Dense(256, activation='relu')(image_input)  # Reduce dimensionality
+    
+    # Define the input for the text sequence (captions)
+    text_input = Input(shape=(max_length,))
+    text_embedding = Embedding(input_dim=5000, output_dim=256)(text_input)
+    text_lstm = LSTM(256)(text_embedding)
+    
+    # Combine the image and text features
+    combined = add([image_dense, text_lstm])
+    combined_output = Dense(5000, activation='softmax')(combined)  # Vocabulary size as output
+    
+    # Build and compile the model
+    model = Model(inputs=[image_input, text_input], outputs=combined_output)
+    model.compile(optimizer='adam', loss='categorical_crossentropy')
+    
 
 
 def main():
