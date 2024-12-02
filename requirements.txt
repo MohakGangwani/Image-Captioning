@@ -1,0 +1,10 @@
+tensorflow[and-cuda]
+optuna
+nltk
+mlflow
+tqdm
+ipykernel
+ipywidgets
+pillow
+pydot
+matplotlib
