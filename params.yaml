@@ -3,18 +3,20 @@ output_path: {
   tokenizer: './Outputs/tokenizer.pkl'
 }
 input_path: {
-  images: './Data/ImagesTest/',
-  captions: './Data/captionsTest.txt'}
+  images: './Data/Images/',
+  captions: './Data/captions.txt'}
 hyperparameters: {
-  'embedding_dim': [4, 12],
-  'dense_units': [8, 16],
-  'batch_size': [1, 2],
-  'epochs': 10,
-  'optimizer': ['adam', 'rmsprop'],
-  'image_dropout': [0.25,],
-  'text_dropout': [0.25],
+  'embedding_dim': [64, 128],
+  'dense_units': [64, 128],
+  'batch_size': 32,
+  'epochs': 20,
+  'optimizer': ['adam'],
+  'image_dropout': [0.25, 0.35],
+  'text_dropout': [0.25, 0.35]
 }
 caption_preprocessing: {
   prefix: 'startseq',
   suffix: 'endseq'
 }
+train_ratio: 0.9
+evaluate_sample: 100

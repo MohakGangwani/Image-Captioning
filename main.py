@@ -1,5 +1,6 @@
 import os
 import pickle
+import random
 import numpy as np
 from tqdm.notebook import tqdm
 from nltk.translate.bleu_score import corpus_bleu
@@ -14,6 +15,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.layers import Input, Dense, LSTM, Embedding, Dropout, add
 from tensorflow.keras.callbacks import Callback
+from tensorflow.keras.callbacks import ReduceLROnPlateau
+from tensorflow.keras.callbacks import EarlyStopping
 import optuna
 from pathlib import Path
 import yaml
@@ -46,7 +49,8 @@ def get_img_features(cnn_model, imgs_path, features_path):
     
     features = {}
     for img_name in tqdm(os.listdir(imgs_path)):
-        features[img_name] = predict_img_features(cnn_model, f"{imgs_path}{img_name}")
+        if img_name.endswith('.jpg'):
+            features[img_name] = predict_img_features(cnn_model, f"{imgs_path}{img_name}")
     os.makedirs(os.path.dirname(features_path), exist_ok=True)
     pickle.dump(features, open(features_path, 'wb'))
     return features
@@ -158,7 +162,7 @@ def build_and_train_model(params, mapping, features, tokenizer, max_length):
     max_length: Maximum sequence length for captions
     """
     image_ids = list(mapping.keys())
-    split = int(len(image_ids) * 0.80)
+    split = int(len(image_ids) * code_params['train_ratio'])
     train = image_ids[:split]
     val = image_ids[split:]
     
@@ -218,7 +222,18 @@ def build_and_train_model(params, mapping, features, tokenizer, max_length):
         vocab_size=vocab_size,
         batch_size=params['batch_size']
     )
-    callbacks = [MLflowMetricsCallback()]
+    lr_scheduler = ReduceLROnPlateau(
+        monitor='val_loss',  # Reduce LR when validation loss plateaus
+        factor=0.5,          # Reduce LR by half
+        patience=2,          # Wait 2 epochs before reducing LR
+        min_lr=1e-6          # Minimum learning rate
+        )
+    early_stopping = EarlyStopping(
+        monitor='val_accuracy',  # Monitor validation accuracy
+        patience=3,              # Stop after 3 epochs without improvement
+        restore_best_weights=True  # Revert to the best weights
+        )
+    callbacks = [MLflowMetricsCallback(), lr_scheduler, early_stopping]
     # Train the model
     model.fit(
         train_generator,
@@ -251,7 +266,7 @@ def build_and_train_model(params, mapping, features, tokenizer, max_length):
     example_output = model.predict(example_input)
     signature = infer_signature(example_input, example_output)
     
-    mlflow.keras.log_model(model, artifact_path="test_model", signature=signature, pip_requirements="requirements.txt")
+    mlflow.keras.log_model(model, artifact_path="model", signature=signature, pip_requirements="requirements.txt")
     return model
 
 
@@ -274,25 +289,19 @@ def objective(trial):
         
         # Prepare validation data for BLEU evaluation
         image_ids = list(clean_mapping.keys())
-        split = int(len(image_ids) * 0.80)
-        train_keys = image_ids[:split]
-        train_images = [features[key + ".jpg"] for key in train_keys]
-        train_captions = [clean_mapping[key] for key in train_keys]
-        test_keys = image_ids[split:]
-        test_images = [features[key + ".jpg"] for key in test_keys]
-        test_captions = [clean_mapping[key] for key in test_keys]
+        split = int(len(image_ids) * code_params['train_ratio'])
+        evaluate_keys = random.sample(image_ids[split:], code_params['evaluate_sample'])
+        evaluate_images = [features[key + ".jpg"] for key in evaluate_keys]
+        evaluate_captions = [clean_mapping[key] for key in evaluate_keys]
         
         # Evaluate BLEU
-        train_bleu_score = evaluate_bleu(model, tokenizer, train_images, train_captions, max_length)
-        val_bleu_score = evaluate_bleu(model, tokenizer, test_images, test_captions, max_length)
+        evaluate_bleu_score = evaluate_bleu(model, tokenizer, evaluate_images, evaluate_captions, max_length)
         
         # Log BLEU to MLflow
-        mlflow.log_metric("train_BLEU", train_bleu_score)
-        mlflow.log_metric("val_BLEU", val_bleu_score)
-        print(f"Trial Train BLEU Score: {train_bleu_score}")
-        print(f"Trial Val BLEU Score: {val_bleu_score}")
+        mlflow.log_metric("BLEU Score", evaluate_bleu_score)
+        print(f"Trial BLEU Score: {evaluate_bleu_score}")
         
-        return val_bleu_score
+        return evaluate_bleu_score
 
 
 def generate_caption(image_feature, model, tokenizer, max_length):
@@ -321,7 +330,7 @@ def evaluate_bleu(model, tokenizer, val_images, val_captions, max_length):
         generated_caption = generate_caption(img_feature, model, tokenizer, max_length)
         references.append([caption.split() for caption in ground_truths])
         candidates.append(generated_caption.split())
-    return corpus_bleu(references, candidates, weights=(1.0, 0.0, 0.0, 0.0))
+    return corpus_bleu(references, candidates, weights=(0.5, 0.5, 0.0, 0.0))
 
 
 class MLflowMetricsCallback(Callback):
