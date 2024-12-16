@@ -275,7 +275,7 @@ def objective(trial):
     params = {
         'embedding_dim': trial.suggest_categorical('embedding_dim', code_params['hyperparameters']['embedding_dim']),
         'dense_units': trial.suggest_categorical('dense_units', code_params['hyperparameters']['dense_units']),
-        'batch_size': trial.suggest_categorical('batch_size', code_params['hyperparameters']['batch_size']),
+        'batch_size': code_params['hyperparameters']['batch_size'],
         'epochs': code_params['hyperparameters']['epochs'],
         'optimizer': trial.suggest_categorical('optimizer', code_params['hyperparameters']['optimizer']),
         'image_dropout': trial.suggest_categorical('image_dropout', code_params['hyperparameters']['image_dropout']),
