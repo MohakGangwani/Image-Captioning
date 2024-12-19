@@ -172,7 +172,7 @@ def main():
     
     # Set MLflow tracking
     mlflow.set_tracking_uri("http://127.0.0.1:5000")
-    mlflow.set_experiment("Image Captioning BLEU Optimization Test2")
+    mlflow.set_experiment("Image Captioning BLEU Optimization")
     
     # Load CNN model for feature extraction
     cnn_model = load_cnn()
