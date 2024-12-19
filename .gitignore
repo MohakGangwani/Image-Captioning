@@ -6,3 +6,4 @@ Outputs/
 Data/Images/*
 !Data/Images/.gitkeep
 Data/archive.zip
+Backup/
