@@ -89,21 +89,21 @@ You can download the dataset from [Flickr8k dataset page](http://www.kaggle.com/
 ---
 
 ## **⚙️Setup Instructions**
-- 1. Clone the Repository
+1. Clone the Repository
 
         
     ```
     git clone https://github.com/your_username/image-captioning.git  
     cd image-captioning
     ```
-- 2. Create a Virtual Environment
+2. Create a Virtual Environment
 
     ```
     python -m venv env  
     source env/bin/activate  # For Linux/Mac  
     env\Scripts\activate     # For Windows  
     ```
-- 3. Install Dependencies
+3. Install Dependencies
 
     ```
     pip install -r requirements.txt  
@@ -111,7 +111,7 @@ You can download the dataset from [Flickr8k dataset page](http://www.kaggle.com/
 ---
 
 ## **🏋️‍♂️Training the Model**
-- **1. Configure Parameters**
+**1. Configure Parameters**
 
     Edit the params.yaml file to set paths, hyperparameters, and training configurations:
     ```
@@ -139,7 +139,7 @@ You can download the dataset from [Flickr8k dataset page](http://www.kaggle.com/
     image_dropout: [0.25, 0.35]
     text_dropout: [0.25, 0.35]
     ```
-- **2. Run Training**
+**2. Run Training**
 
     Execute the main.py script to start training:
 

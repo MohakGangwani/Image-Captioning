@@ -2,6 +2,7 @@ imagecap/
 Old/
 mlruns/
 mlartifacts/
+Outputs/*
 !Outputs/.gitkeep
 Data/Images/*
 !Data/Images/.gitkeep
