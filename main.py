@@ -1,21 +1,16 @@
+import random
 import mlflow
+from mlflow.models.signature import infer_signature
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense, LSTM, Embedding, Dropout, add
+from tensorflow.keras.callbacks import Callback
+from tensorflow.keras.callbacks import ReduceLROnPlateau
+from tensorflow.keras.callbacks import EarlyStopping
 import optuna
 import yaml
-from utils import *
+from src.utils import *
 
-class MLflowMetricsCallback(Callback):
-    def on_epoch_end(self, epoch, logs=None):
-        print("Logging metrics")
-        # Log training metrics
-        mlflow.log_metric("train_loss", logs["loss"], step=epoch)
-        mlflow.log_metric("train_accuracy", logs["accuracy"], step=epoch)
-        print("Going into if statement")
-        # Log validation metrics
-        if "val_loss" in logs:
-            mlflow.log_metric("val_loss", logs["val_loss"], step=epoch)
-            mlflow.log_metric("val_accuracy", logs["val_accuracy"], step=epoch)
-
-        print("Done with Logging")
 
 def build_and_train_model(params, mapping, features, tokenizer, max_length):
     """
@@ -134,6 +129,7 @@ def build_and_train_model(params, mapping, features, tokenizer, max_length):
     mlflow.keras.log_model(model, artifact_path="model", signature=signature, pip_requirements="requirements.txt")
     return model
 
+
 def objective(trial):
     # Sample hyperparameters
     params = {
@@ -168,7 +164,23 @@ def objective(trial):
         return evaluate_bleu_score
 
 
+class MLflowMetricsCallback(Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        # Log training metrics
+        mlflow.log_metric("train_loss", logs["loss"], step=epoch)
+        mlflow.log_metric("train_accuracy", logs["accuracy"], step=epoch)
+
+        # Log validation metrics
+        if "val_loss" in logs:
+            mlflow.log_metric("val_loss", logs["val_loss"], step=epoch)
+            mlflow.log_metric("val_accuracy", logs["val_accuracy"], step=epoch)
+
+
 def main():
+    
+    global code_params
+    with open('params.yaml', 'r') as f:
+        code_params = yaml.load(f, Loader=yaml.SafeLoader)
     
     # Set MLflow tracking
     mlflow.set_tracking_uri("http://127.0.0.1:5000")
@@ -197,7 +209,7 @@ def main():
     
     # Run Optuna for hyperparameter optimization
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=10)
+    study.optimize(objective, n_trials=10)  # Adjust number of trials as needed
     
     # Print the best parameters
     print(f"Best BLEU Score: {study.best_value}")
