@@ -83,7 +83,6 @@ You can download the dataset from [Flickr8k dataset page](http://www.kaggle.com/
 ├── requirements.txt          # Python dependencies  
 └── src/                      # Source code  
     ├── utils.py              # Helper functions for preprocessing, training, etc.  
-    ├── test.ipynb            # Notebook for model testing  
 ```
 
 ---
